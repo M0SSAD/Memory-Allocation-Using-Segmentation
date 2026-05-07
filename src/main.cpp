@@ -581,14 +581,10 @@ int main() {
 
 	{
 		io.Fonts->Clear();
-		const char *fontPath = "/usr/share/fonts/noto/NotoSans-Regular.ttf";
 		float fontSize = L_FONT_BASE * g_dpiScale;
-		ImFont *font = io.Fonts->AddFontFromFileTTF(fontPath, fontSize);
-		if (!font) {
-			ImFontConfig fallbackCfg;
-			fallbackCfg.SizePixels = fontSize;
-			io.Fonts->AddFontDefault(&fallbackCfg);
-		}
+		ImFontConfig fallbackCfg;
+		fallbackCfg.SizePixels = fontSize;
+		io.Fonts->AddFontDefault(&fallbackCfg);
 		io.Fonts->Build();
 	}
 

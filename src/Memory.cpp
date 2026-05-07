@@ -5,26 +5,40 @@
 // function to revert the holes to the previous state if the process addition
 // fails.
 ErrorData Memory::rollback(std::stack<UndoRecord> &ledger, int failed_limit) {
-	while (!ledger.empty()) {
-		UndoRecord rec = ledger.top();
-		ledger.pop();
-		auto it2 =
-		    std::find_if(holes.begin(), holes.end(), [rec](const Hole &hole) {
-			    return hole.baseAddress ==
-			           rec.base_address + rec.allocated_size;
-		    });
-		if (it2 == holes.end()) {
-			holes.push_back({rec.base_address, rec.allocated_size});
-			holes.sort([](const Hole &a, const Hole &b) {
-				return a.baseAddress < b.baseAddress;
-			});
-		} else {
-			it2->baseAddress = rec.base_address;
-			it2->limit += rec.allocated_size;
-		}
-	}
-	return ErrorData{"There is no free space in memory that can contain " +
-	                 std::to_string(failed_limit) + "."};
+    while (!ledger.empty()) {
+        UndoRecord rec = ledger.top();
+        ledger.pop();
+
+        auto freed_base = rec.base_address;
+        auto freed_limit = rec.allocated_size;
+        
+		// search for the place where this segment should have been.
+        auto hole_it = holes.begin();
+        while (hole_it != holes.end() && hole_it->baseAddress < freed_base) {
+            hole_it++;
+        }
+
+		// insert the hole.
+        auto new_hole = holes.insert(hole_it, {freed_base, freed_limit});
+
+		// now check if it can merge with a hole before it or a hole after it.
+        auto next_hole = std::next(new_hole);
+        if (next_hole != holes.end() && (new_hole->baseAddress + new_hole->limit == next_hole->baseAddress)) {
+            new_hole->limit += next_hole->limit; 
+            holes.erase(next_hole);              
+        }
+
+        if (new_hole != holes.begin()) {
+            auto prev_hole = std::prev(new_hole);
+            if (prev_hole->baseAddress + prev_hole->limit == new_hole->baseAddress) {
+                prev_hole->limit += new_hole->limit;   
+                holes.erase(new_hole); 
+            }
+        }
+    }
+    
+    return ErrorData{"There is no free space in memory that can contain " +
+                     std::to_string(failed_limit) + "."};
 }
 
 std::variant<bool, ErrorData> Memory::allocate(std::unique_ptr<Process> p) {
