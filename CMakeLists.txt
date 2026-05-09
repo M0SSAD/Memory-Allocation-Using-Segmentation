@@ -4,6 +4,10 @@ project(MemorySimulator LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+if(MSVC)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+endif()
+
 include(FetchContent)
 
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
@@ -27,7 +31,7 @@ FetchContent_MakeAvailable(imgui)
 
 find_package(OpenGL REQUIRED)
 
-add_executable(app
+add_executable(app WIN32
     src/main.cpp
     src/Memory.cpp
     ${imgui_SOURCE_DIR}/imgui.cpp
@@ -45,3 +49,7 @@ target_include_directories(app PRIVATE
 )
 
 target_link_libraries(app PRIVATE glfw OpenGL::GL)
+
+if(MINGW)
+    target_link_options(app PRIVATE -static -static-libgcc -static-libstdc++)
+endif()
